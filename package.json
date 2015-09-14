@@ -32,6 +32,8 @@
     "clean": "rm -rf lib",
     "compile": "mkdir -p lib && babel src -d lib --optional runtime -s inline",
     "compile:watch": "mkdir -p lib && babel src -d lib --optional runtime -s inline -w",
+    "coverage": "istanbul cover _mocha -- --compilers js:babel/register test/*js",
+    "coveralls": "npm run coverage && coveralls <coverage/lcov.info",
     "lint": "eslint src test",
     "test": "istanbul test mocha -- --compilers js:babel/register --reporter spec test/*.js"
   },

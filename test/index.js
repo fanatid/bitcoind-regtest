@@ -18,7 +18,7 @@ describe('Bitcoind', function () {
 
   let createWithOpts = async (opts) => {
     bitcoind = new Bitcoind(opts)
-    // bitcoind.on('data', (data) => { console.log(data.toString()) })
+    bitcoind.on('data', (data) => { console.log(data.toString()) })
     bitcoind.on('error', (err) => {
       console.log(`Bitcoind error: ${err.stack}`)
     })

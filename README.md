@@ -10,7 +10,30 @@
 
 ## Example
 
+```js
+import RegtestBitcoind from 'bitcoind-regtest'
+
+setImmediate(async () => {
+  let bitcoind = new RegtestBitcoind()
+  await bitcoind.ready
+  await bitcoind.generateBlocks(105)
+  let preload = await bitcoind.getPreload()
+  console.log(preload)
+  // {
+  //   txId: '757f53cee55b38e564b37b7a06bc8f0758338621015b7ff02001317af0fa3b14',
+  //   outIndex: 0,
+  //   value: 1000000000,
+  //   script: <Script: OP_DUP OP_HASH160 20 0x5d1ecf7e16de5ff76368d709cde74bb52dc7f3c4 OP_EQUALVERIFY OP_CHECKSIG>,
+  //   privKey: <PrivateKey: 294d6127bdc8b6cac4137f13cae854030ef544e595e41b8519d8f6d4966d3764, network: regtest>
+  // }
+
+  await bitcoind.terminate()
+})
+```
+
 ## API
+
+[here](https://github.com/fanatid/bitcoind-regtest/blob/master/API.md)
 
 ## License
 
