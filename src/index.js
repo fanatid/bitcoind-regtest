@@ -228,13 +228,31 @@ export default class Bitcoind extends EventEmitter {
   get rpc () { return this.getRpcClient() }
 
   /**
+   * @param {function} fn
+   * @return {Promise}
+   */
+  withLock = makeConcurrent((fn) => { return fn() })
+
+  /**
    * Generate `count` blocks
    * @param {number} count
    * @return {Promise.<Array.<string>>}
    */
   generateBlocks = makeConcurrent(async (count) => {
     await this.ready
-    return (await this.rpc.generate(count)).result
+
+    let hashes = []
+    for (; count > 0; count -= 1) {
+      let requiredMemPoolSize = this._opts.generate.txs.minInBlock()
+      let memPoolSize = (await this.rpc.getMemPoolInfo()).result.size
+      await this.generateTxs(requiredMemPoolSize - memPoolSize)
+      await this.withLock(async () => {
+        let ret = await this.rpc.generate(1)
+        hashes.push(ret.result[0])
+      })
+    }
+
+    return hashes
   })
 
   /**

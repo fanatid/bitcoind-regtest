@@ -51,8 +51,8 @@ export default class Wallet extends EventEmitter {
     this.ready.then(async () => {
       while (true) {
         try {
-          await PUtils.sleep(this._getWalletOption('newKeyTimeout'))
-          await this._bitcoind.rpc.getNewAddress()
+          await PUtils.delay(this._getWalletOption('newKeyTimeout'))
+          await this._bitcoind.rpc.getNewAddress('')
         } catch (err) {
           this.emit(err)
         }
@@ -74,17 +74,11 @@ export default class Wallet extends EventEmitter {
   }
 
   /**
-   * @param {function} fn
-   * @return {Promise}
-   */
-  _withLock = makeConcurrent((fn) => { return fn() })
-
-  /**
    * @return {Promise.<Bitcoind~PreloadObject>}
    */
   getPreload = makeConcurrent(async () => {
     while (this._preloadsPool.length === 0) {
-      await PUtils.sleep(50)
+      await PUtils.delay(50)
     }
 
     let preload = this._preloadsPool.shift()
@@ -104,7 +98,7 @@ export default class Wallet extends EventEmitter {
         return {
           txId: row.txid,
           outputIndex: row.vout,
-          satoshis: row.amount * 1e8,
+          satoshis: Math.floor(row.amount * 1e8),
           script: row.scriptPubKey
         }
       }))
@@ -134,13 +128,13 @@ export default class Wallet extends EventEmitter {
    * @return {Promise}
    */
   _updatePreloads () {
-    return this._withLock(async () => {
+    return this._bitcoind.withLock(async () => {
       try {
         if (this._preloadsPool.length >= this._getWalletOption('preloadsPoolSize')) {
           return
         }
 
-        let ret = await this._bitcoind.rpc.listUnspent()
+        let ret = await this._bitcoind.rpc.listUnspent(0)
         let utxo = _.chain(ret.result)
           .sortBy('amount')
           .reverse()
@@ -186,11 +180,11 @@ export default class Wallet extends EventEmitter {
    * @return {Promise.<?string>}
    */
   generateTx () {
-    return this._withLock(async () => {
-      let ret = await this._bitcoind.rpc.listUnspent()
+    return this._bitcoind.withLock(async () => {
+      let ret = await this._bitcoind.rpc.listUnspent(0)
       let utxo = _.sample(ret.result, this._getWalletOption('inputsCount'))
-      let utxoTotalAmount = _.sum(_.pluck(utxo, 'amount')) * 1e8
-      if (utxoTotalAmount < 1e7) {
+      let utxoTotalAmount = _.sum(_.pluck(utxo, 'amount')) * 1e8 - 1e4
+      if (utxo.length === 0 || utxoTotalAmount < 1e7) {
         return null
       }
 

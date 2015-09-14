@@ -1,9 +1,14 @@
 import _ from 'lodash'
-import { expect } from 'chai'
+import chai from 'chai'
+import sinon from 'sinon'
+import sinonChai from 'sinon-chai'
 import RpcClient from 'bitcoind-rpc-client'
 import PUtils from 'promise-useful-utils'
 
 import Bitcoind from '../src'
+
+let expect = chai.expect
+chai.use(sinonChai)
 
 describe('Bitcoind', function () {
   this.timeout(60000)
@@ -13,7 +18,9 @@ describe('Bitcoind', function () {
     return PUtils.try(() => {
       bitcoind = new Bitcoind(opts)
       // bitcoind.on('data', (data) => { console.log(data.toString()) })
-      bitcoind.on('error', (err) => { console.log(`Bitcoind error: ${err.stack}`) })
+      bitcoind.on('error', (err) => {
+        console.log(`Bitcoind error: ${err.stack}`)
+      })
       return bitcoind.ready
     })
   }
@@ -44,36 +51,47 @@ describe('Bitcoind', function () {
   it('generateBlocks and wait event block', () => {
     return PUtils.try(async () => {
       await createWithOpts()
+
       await new Promise(async (resolve, reject) => {
         let hashes
         bitcoind.on('block', (hash) => {
           try {
-            expect(hashes).to.deep.equal([hash])
-            resolve()
+            expect(hashes).to.include(hash)
+            hashes = _.without(hashes, hash)
+            if (hashes.length === 0) { resolve() }
           } catch (err) {
             reject(err)
           }
         })
-        hashes = await bitcoind.generateBlocks(1)
+        hashes = await bitcoind.generateBlocks(2)
       })
+
+      let height = (await bitcoind.rpc.getBlockCount()).result
+      expect(height).to.equal(2)
     })
   })
 
   it('generateTx and wait event tx', () => {
     return PUtils.try(async () => {
-      await createWithOpts({wallet: {preloadsPoolSize: _.constant(0)}})
+      await createWithOpts({
+        generate: {txs: {minInBlock: _.constant(0)}},
+        wallet: {preloadsPoolSize: _.constant(0)}
+      })
+
       await bitcoind.generateBlocks(102)
       await new Promise(async (resolve, reject) => {
         let txids
-        bitcoind.on('tx', (txid) => {
+        bitcoind.on('tx', async (txid) => {
+          await PUtils.delay(250)
           try {
-            expect(txids).to.deep.equal([txid])
-            resolve()
+            expect(txids).to.include(txid)
+            txids = _.without(txids, txid)
+            if (txids.length === 0) { resolve() }
           } catch (err) {
             reject(err)
           }
         })
-        txids = await bitcoind.generateTxs(1)
+        txids = await bitcoind.generateTxs(2)
       })
     })
   })
@@ -87,6 +105,22 @@ describe('Bitcoind', function () {
       let {result} = await bitcoind.rpc.getTxOut(preload.txId, preload.outIndex)
       expect(result).to.have.property('value', 10)
       expect(_.get(result, 'scriptPubKey.addresses')).to.deep.equal([preload.privKey.toAddress().toString()])
+    })
+  })
+
+  it('option generate.txs.minInBlock', () => {
+    return PUtils.try(async () => {
+      await createWithOpts({
+        wallet: {preloadsPoolSize: _.constant(0)},
+        generate: {txs: {minInBlock: _.constant(2)}}
+      })
+
+      let spy = sinon.spy()
+      bitcoind.on('tx', spy)
+
+      await bitcoind.generateBlocks(102)
+      await PUtils.delay(50)
+      expect(spy).to.have.been.callCount(2)
     })
   })
 })
