@@ -11,9 +11,11 @@ let expect = chai.expect
 chai.use(sinonChai)
 
 describe('Bitcoind', function () {
-  this.timeout(60000)
+  this.timeout(20000)
 
   let bitcoind
+  let fork
+
   let createWithOpts = async (opts) => {
     bitcoind = new Bitcoind(opts)
     // bitcoind.on('data', (data) => { console.log(data.toString()) })
@@ -41,7 +43,9 @@ describe('Bitcoind', function () {
   })
 
   it('generateBlocks and wait event block', async () => {
-    await createWithOpts()
+    await createWithOpts({
+      generate: {blocks: {background: _.constant(false)}}
+    })
 
     await new Promise(async (resolve, reject) => {
       let hashes
@@ -152,5 +156,46 @@ describe('Bitcoind', function () {
     await PUtils.delay(1500)
     let height = (await bitcoind.rpc.getBlockCount()).result
     expect(height).to.equal(1)
+  })
+
+  it('fork', async () => {
+    await createWithOpts()
+
+    await bitcoind.generateBlocks(105)
+
+    try {
+      fork = await bitcoind.fork()
+
+      let hashes = _.pluck(
+        await* [bitcoind.rpc.getBestBlockHash(), fork.rpc.getBestBlockHash()], 'result')
+      expect(hashes[0]).to.equal(hashes[1])
+    } finally {
+      if (fork) {
+        await fork.terminate()
+      }
+    }
+  })
+
+  it('simple reorg', async () => {
+    await createWithOpts({
+      generate: {blocks: {background: _.constant(false)}}
+    })
+
+    await bitcoind.generateBlocks(105)
+    try {
+      fork = await bitcoind.fork({connected: false})
+
+      await* [bitcoind.generateBlocks(2), fork.generateBlocks(3)]
+      await bitcoind.connect(fork)
+      await PUtils.delay(3000)
+
+      let hashes = _.pluck(
+        await* [bitcoind.rpc.getBestBlockHash(), fork.rpc.getBestBlockHash()], 'result')
+      expect(hashes[0]).to.equal(hashes[1])
+    } finally {
+      if (fork) {
+        await fork.terminate()
+      }
+    }
   })
 })

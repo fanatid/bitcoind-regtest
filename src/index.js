@@ -2,6 +2,7 @@ import _ from 'lodash'
 import { EventEmitter } from 'events'
 import readyMixin from 'ready-mixin'
 import _tmpfs from 'tmp'
+import _rimraf from 'rimraf'
 import crypto from 'crypto'
 import { spawn } from 'child_process'
 import bitcore from 'bitcore'
@@ -13,6 +14,8 @@ import PUtils from 'promise-useful-utils'
 import Wallet from './wallet'
 
 let tmpfs = PUtils.promisifyAll(_tmpfs)
+let rimraf = PUtils.promisify(_rimraf)
+
 let encode = (s) => {
   return Array.prototype.reverse.call(new Buffer(s)).toString('hex')
 }
@@ -87,12 +90,12 @@ export default class Bitcoind extends EventEmitter {
         generate: {
           txs: {
             background: _.constant(true),
-            timeout: () => _.random(6, 9, true),
+            timeout: () => _.random(6, 9, true) * 1000,
             minInBlock: _.constant(5)
           },
           blocks: {
             background: _.constant(true),
-            timeout: () => _.random(60, 90, true)
+            timeout: () => _.random(60, 90, true) * 1000
           }
         },
         bitcoind: {
@@ -206,7 +209,9 @@ export default class Bitcoind extends EventEmitter {
       while (true) {
         try {
           await PUtils.delay(this._opts.generate.txs.timeout())
-          await this.generateTxs(1)
+          if (this._opts.generate.txs.background()) {
+            await this.generateTxs(1)
+          }
         } catch (err) {
           this.emit(err)
         }
@@ -218,7 +223,9 @@ export default class Bitcoind extends EventEmitter {
       while (true) {
         try {
           await PUtils.delay(this._opts.generate.blocks.timeout())
-          await this.generateBlocks(1)
+          if (this._opts.generate.blocks.background()) {
+            await this.generateBlocks(1)
+          }
         } catch (err) {
           this.emit(err)
         }
@@ -232,6 +239,12 @@ export default class Bitcoind extends EventEmitter {
    * @return {*}
    */
   getOption (name) { return _.get(this._opts, name) }
+
+  /**
+   * @param {string} name
+   * @param {*}
+   */
+  setOption (name, value) { _.set(this._opts, name, value) }
 
   /**
    * Return instance of `RpcClient`
@@ -315,19 +328,55 @@ export default class Bitcoind extends EventEmitter {
    * @param {boolean} [opts.connected=true]
    * @return {Promise.<Bitcoind>}
    */
-  fork (opts) {}
+  async fork (opts) {
+    let bopts = _.cloneDeep(this._opts)
+    bopts.generate.txs.background = _.constant(false)
+    bopts.generate.blocks.background = _.constant(false)
+    let other = new Bitcoind(bopts)
+
+    await other.ready
+    await this.connect(other)
+
+    if ((await this.rpc.getBlockCount()).result > 0) {
+      await other.generateBlocks(1)
+
+      while (true) {
+        let [mhash, ohash] = await* [this.rpc.getBestBlockHash(), other.rpc.getBestBlockHash()]
+        if (mhash.result === ohash.result) {
+          break
+        }
+
+        await PUtils.delay(500)
+      }
+    }
+
+    other.setOption('generate.txs.background', this._opts.generate.txs.background)
+    other.setOption('generate.blocks.background', this._opts.generate.blocks.background)
+
+    if (!Object(opts).connected) {
+      await this.disconnect(other)
+    }
+
+    return other
+  }
 
   /**
    * @param {Bitcoind}
    * @return {Promise}
    */
-  connect (other) {}
+  async connect (other) {
+    let node = `127.0.0.1:${other._processOpts.port}`
+    await this.rpc.addNode(node, 'onetry')
+  }
 
   /**
    * @param {Bitcoind}
    * @return {Promise}
    */
-  disconnect (other) {}
+  async disconnect (other) {
+    let node = `127.0.0.1:${other._processOpts.port}`
+    await this.rpc.disconnectNode(node)
+  }
 
   /**
    * @return {Promise}
@@ -343,16 +392,22 @@ export default class Bitcoind extends EventEmitter {
     try {
       await new Promise((resolve, reject) => {
         onError = reject
-        onExit = (code, signal) => {
-          if (code === 0 && signal === null) {
+        onExit = async (code, signal) => {
+          if (!(code === 0 && signal === null)) {
+            return reject(
+              new Error(`Exit with code = ${code} on signal = ${signal}`))
+          }
+
+          try {
             this._wallet.removeAllListeners()
             this._peer.removeAllListeners()
             this._process.removeAllListeners()
             this._process = null
-            return resolve()
+            await rimraf(this._processOpts.datadir)
+            resolve()
+          } catch (err) {
+            reject(err)
           }
-
-          reject(new Error(`Exit with code = ${code} on signal = ${signal}`))
         }
 
         this._process.on('error', onError)
