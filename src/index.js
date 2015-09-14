@@ -200,6 +200,30 @@ export default class Bitcoind extends EventEmitter {
       await this._wallet.ready
     })
     .then(() => { this._ready(null) }, (err) => { this._ready(err) })
+
+    // loop for creating new transactions in background
+    this.ready.then(async () => {
+      while (true) {
+        try {
+          await PUtils.delay(this._opts.generate.txs.timeout())
+          await this.generateTxs(1)
+        } catch (err) {
+          this.emit(err)
+        }
+      }
+    })
+
+    // loop for creating new blocks in background
+    this.ready.then(async () => {
+      while (true) {
+        try {
+          await PUtils.delay(this._opts.generate.blocks.timeout())
+          await this.generateBlocks(1)
+        } catch (err) {
+          this.emit(err)
+        }
+      }
+    })
   }
 
   /**
