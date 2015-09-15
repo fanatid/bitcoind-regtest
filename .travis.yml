@@ -1,10 +1,7 @@
-sudo: required
 language: node_js
 node_js:
   - "0.12"
   - "4.0"
-before_install:
-  - sudo apt-get install -y libboost-all-dev
 env:
   - TEST_SUITE=coveralls
   - TEST_SUITE=lint

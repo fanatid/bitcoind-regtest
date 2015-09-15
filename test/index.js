@@ -11,14 +11,14 @@ let expect = chai.expect
 chai.use(sinonChai)
 
 describe('Bitcoind', function () {
-  this.timeout(20000)
+  this.timeout(30000)
 
   let bitcoind
   let fork
 
   let createWithOpts = async (opts) => {
     bitcoind = new Bitcoind(opts)
-    bitcoind.on('data', (data) => { console.log(data.toString()) })
+    // bitcoind.on('data', (data) => { console.log(data.toString()) })
     bitcoind.on('error', (err) => {
       console.log(`Bitcoind error: ${err.stack}`)
     })
@@ -47,9 +47,12 @@ describe('Bitcoind', function () {
       generate: {blocks: {background: _.constant(false)}}
     })
 
-    await new Promise(async (resolve, reject) => {
+    await new Promise((resolve, reject) => {
       let hashes
-      bitcoind.on('block', (hash) => {
+      let promise
+
+      bitcoind.on('block', async (hash) => {
+        await promise
         try {
           expect(hashes).to.include(hash)
           hashes = _.without(hashes, hash)
@@ -58,7 +61,8 @@ describe('Bitcoind', function () {
           reject(err)
         }
       })
-      hashes = await bitcoind.generateBlocks(2)
+
+      promise = bitcoind.generateBlocks(2).then((result) => { hashes = result })
     })
 
     let height = (await bitcoind.rpc.getBlockCount()).result
@@ -72,10 +76,12 @@ describe('Bitcoind', function () {
     })
 
     await bitcoind.generateBlocks(102)
-    await new Promise(async (resolve, reject) => {
+    await new Promise((resolve, reject) => {
+      let promise
       let txids
+
       bitcoind.on('tx', async (txid) => {
-        await PUtils.delay(250)
+        await promise
         try {
           expect(txids).to.include(txid)
           txids = _.without(txids, txid)
@@ -84,7 +90,8 @@ describe('Bitcoind', function () {
           reject(err)
         }
       })
-      txids = await bitcoind.generateTxs(2)
+
+      promise = bitcoind.generateTxs(2).then((result) => { txids = result })
     })
   })
 
@@ -138,7 +145,7 @@ describe('Bitcoind', function () {
     bitcoind.on('tx', spy)
 
     await bitcoind.generateBlocks(102)
-    await PUtils.delay(50)
+    await PUtils.delay(500)
     expect(spy).to.have.been.callCount(2)
   })
 
@@ -153,7 +160,7 @@ describe('Bitcoind', function () {
       return 1000
     }}}})
 
-    await PUtils.delay(1500)
+    await PUtils.delay(2500)
     let height = (await bitcoind.rpc.getBlockCount()).result
     expect(height).to.equal(1)
   })
