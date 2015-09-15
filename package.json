@@ -1,6 +1,6 @@
 {
   "name": "bitcoind-regtest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run bitcoind in regtest mode for your own blockchain",
   "keywords": [
     "bitcoin",
@@ -20,6 +20,7 @@
     "bitcoind",
     "lib",
     "src",
+    "API.md",
     "LICENSE",
     "README.md"
   ],

@@ -68,7 +68,7 @@ export default class Bitcoind extends EventEmitter {
    * @param {function} [opts.generate.blocks.background=_.constant(true)]
    * @param {function} [opts.generate.blocks.timeout=() => _.random(60, 90, true) * 1000]
    * @param {Object} [opts.bitcoind]
-   * @param {function} [opts.bitcoind.path=() => '../bitcoind/bitcoind']
+   * @param {function} [opts.bitcoind.path=() => '../bitcoind/bitcoind-rev-3224936']
    * @param {function} [opts.bitcoind.datadir=async () => _.first(tmpfs.dir({prefix: 'bitcoind-regtest-'}))]
    * @param {function} [opts.bitcoind.port=() => _.random(20000, 30000)]
    * @param {function} [opts.bitcoind.rpcport=() => _.random(20000, 30000)]
@@ -99,7 +99,7 @@ export default class Bitcoind extends EventEmitter {
           }
         },
         bitcoind: {
-          path: () => '../bitcoind/bitcoind',
+          path: () => '../bitcoind/bitcoind-rev-3224936',
           datadir: async () => _.first(await tmpfs.dirAsync({
             prefix: 'bitcoind-regtest-',
             keep: false,
