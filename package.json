@@ -17,6 +17,7 @@
     "email": "fanatid@ya.ru"
   },
   "files": [
+    "bitcoind",
     "lib",
     "src",
     "LICENSE",
