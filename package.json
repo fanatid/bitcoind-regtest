@@ -1,6 +1,6 @@
 {
   "name": "bitcoind-regtest",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Run bitcoind in regtest mode for your own blockchain",
   "keywords": [
     "bitcoin",
@@ -44,10 +44,11 @@
     "babel-runtime": "^5.8.24",
     "bitcoind-rpc-client": "^0.2.0",
     "bitcore-p2p": "^0.15.1",
+    "core-decorators": "^0.7.0",
     "lodash": "^3.10.1",
-    "make-concurrent": "^1.0.1",
+    "make-concurrent": "^1.1.0",
     "promise-useful-utils": "^0.2.1",
-    "ready-mixin": "^1.0.0",
+    "ready-mixin": "^2.0.0",
     "rimraf": "^2.4.3",
     "tmp": "0.0.27"
   },

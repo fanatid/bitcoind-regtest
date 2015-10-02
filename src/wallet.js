@@ -1,6 +1,7 @@
 import _ from 'lodash'
 import { EventEmitter } from 'events'
-import readyMixin from 'ready-mixin'
+import { mixin } from 'core-decorators'
+import ReadyMixin from 'ready-mixin'
 import bitcore from 'bitcore'
 import makeConcurrent from 'make-concurrent'
 import PUtils from 'promise-useful-utils'
@@ -25,6 +26,7 @@ bitcore.Networks.add({
 /**
  * @class Wallet
  */
+@mixin(ReadyMixin)
 export default class Wallet extends EventEmitter {
   /**
    * @constructor
@@ -76,7 +78,8 @@ export default class Wallet extends EventEmitter {
   /**
    * @return {Promise.<Bitcoind~PreloadObject>}
    */
-  getPreload = makeConcurrent(async () => {
+  @makeConcurrent({concurrency: 1})
+  async getPreload () {
     while (this._preloadsPool.length === 0) {
       await PUtils.delay(50)
     }
@@ -84,7 +87,7 @@ export default class Wallet extends EventEmitter {
     let preload = this._preloadsPool.shift()
     this._updatePreloads()
     return preload
-  })
+  }
 
   /**
    * @param {Array.<Object>} utxo
@@ -207,5 +210,3 @@ export default class Wallet extends EventEmitter {
     })
   }
 }
-
-readyMixin(Wallet.prototype)

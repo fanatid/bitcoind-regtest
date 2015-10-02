@@ -1,6 +1,7 @@
 import _ from 'lodash'
 import { EventEmitter } from 'events'
-import readyMixin from 'ready-mixin'
+import { mixin } from 'core-decorators'
+import ReadyMixin from 'ready-mixin'
 import _tmpfs from 'tmp'
 import _rimraf from 'rimraf'
 import crypto from 'crypto'
@@ -49,6 +50,7 @@ let encode = (s) => {
 /**
  * @class Bitcoind
  */
+@mixin(ReadyMixin)
 export default class Bitcoind extends EventEmitter {
   /**
    * @constructor
@@ -268,14 +270,16 @@ export default class Bitcoind extends EventEmitter {
    * @param {function} fn
    * @return {Promise}
    */
-  withLock = makeConcurrent((fn) => { return fn() })
+  @makeConcurrent({concurrency: 1})
+  withLock (fn) { return fn() }
 
   /**
    * Generate `count` blocks
    * @param {number} count
    * @return {Promise.<Array.<string>>}
    */
-  generateBlocks = makeConcurrent(async (count) => {
+  @makeConcurrent({concurrency: 1})
+  async generateBlocks (count) {
     await this.ready
 
     let hashes = []
@@ -290,7 +294,7 @@ export default class Bitcoind extends EventEmitter {
     }
 
     return hashes
-  })
+  }
 
   /**
    * Generate `count` transactions
@@ -381,7 +385,8 @@ export default class Bitcoind extends EventEmitter {
   /**
    * @return {Promise}
    */
-  terminate = makeConcurrent(async () => {
+  @makeConcurrent({concurrency: 1})
+  async terminate () {
     let onError
     let onExit
 
@@ -421,7 +426,5 @@ export default class Bitcoind extends EventEmitter {
         this._process.removeListener('exit', onExit)
       }
     }
-  })
+  }
 }
-
-readyMixin(Bitcoind.prototype)
