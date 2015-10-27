@@ -2,7 +2,7 @@ import _ from 'lodash'
 import { EventEmitter } from 'events'
 import { mixin } from 'core-decorators'
 import ReadyMixin from 'ready-mixin'
-import bitcore from 'bitcore'
+import bitcore from 'bitcore-lib'
 import makeConcurrent from 'make-concurrent'
 import PUtils from 'promise-useful-utils'
 
