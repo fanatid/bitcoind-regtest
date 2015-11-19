@@ -1,6 +1,6 @@
 {
   "name": "bitcoind-regtest",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "Run bitcoind in regtest mode for your own blockchain",
   "keywords": [
     "bitcoin",
@@ -12,16 +12,12 @@
     "url": "https://github.com/fanatid/bitcoind-regtest/issues"
   },
   "license": "MIT",
-  "author": {
-    "name": "Kirill Fomichev",
-    "email": "fanatid@ya.ru"
-  },
+  "author": "Kirill Fomichev <fanatid@ya.ru>",
   "files": [
     "bitcoind",
     "lib",
     "src",
     "API.md",
-    "LICENSE",
     "README.md"
   ],
   "main": "./lib/index.js",
@@ -36,7 +32,7 @@
     "compile:watch": "mkdir -p lib && babel src -d lib -w",
     "coverage": "istanbul cover _mocha -- --compilers js:babel/register test/*js",
     "coveralls": "npm run coverage && coveralls <coverage/lcov.info",
-    "lint": "eslint src test",
+    "lint": "standard",
     "test": "istanbul test mocha -- --compilers js:babel/register --reporter spec test/*.js"
   },
   "dependencies": {
@@ -59,12 +55,21 @@
     "babel-eslint": "^4.1.1",
     "chai": "^3.2.0",
     "coveralls": "^2.11.4",
-    "eslint": "^1.4.1",
-    "eslint-config-standard": "^4.3.2",
-    "eslint-plugin-standard": "^1.3.0",
     "istanbul": "^0.4.0",
     "mocha": "^2.3.2",
     "sinon": "^1.16.1",
-    "sinon-chai": "^2.8.0"
+    "sinon-chai": "^2.8.0",
+    "standard": "^5.4.1"
+  },
+  "engines": {
+    "node": ">=0.12"
+  },
+  "standard": {
+    "globals": [
+      "describe",
+      "afterEach",
+      "it"
+    ],
+    "parser": "babel-eslint"
   }
 }
