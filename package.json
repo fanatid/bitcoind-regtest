@@ -18,6 +18,7 @@
     "lib",
     "src",
     "API.md",
+    "LICENSE",
     "README.md"
   ],
   "main": "./lib/index.js",
